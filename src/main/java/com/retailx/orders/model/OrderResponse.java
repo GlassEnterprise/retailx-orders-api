@@ -6,9 +6,9 @@ import java.util.List;
 
 /**
  * Order Response Model
- *
+ * 
  * Represents an order in the RetailX system with all its details.
- *
+ * 
  * TODOs:
  * - [ ] Add tracking information (RETAILX-8015)
  * - [ ] Add estimated delivery date (RETAILX-8016)
@@ -16,7 +16,7 @@ import java.util.List;
  * - [ ] Add order history/audit trail (RETAILX-8018)
  */
 public class OrderResponse {
-
+    
     private String orderId;
     private String customerEmail;
     private List<CreateOrderRequest.OrderItem> items;

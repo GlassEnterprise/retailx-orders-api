@@ -2,9 +2,7 @@ package com.retailx.orders.service;
 
 import com.retailx.orders.client.NotificationClient;
 import com.retailx.orders.model.CreateOrderRequest;
-import com.retailx.orders.model.Order;
 import com.retailx.orders.model.OrderResponse;
-import com.retailx.orders.repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,12 +35,13 @@ public class OrderService {
     
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     
-    private final OrderRepository orderRepository;
+    // TODO: Replace with proper database storage (RETAILX-8003)
+    private final Map<String, OrderResponse> orderStore = new HashMap<>();
+    
     private final NotificationClient notificationClient;
     
     @Autowired
-    public OrderService(OrderRepository orderRepository, NotificationClient notificationClient) {
-        this.orderRepository = orderRepository;
+    public OrderService(NotificationClient notificationClient) {
         this.notificationClient = notificationClient;
     }
     
@@ -66,7 +67,7 @@ public class OrderService {
         BigDecimal totalAmount = calculateTotalAmount(request);
         
         // Create order response
-        Order order = new Order(
+        OrderResponse order = new OrderResponse(
             orderId,
             request.getCustomerEmail(),
             request.getItems(),
@@ -78,7 +79,7 @@ public class OrderService {
         );
         
         // Store order (TODO: use database instead of in-memory storage)
-        orderRepository.save(order);
+        orderStore.put(orderId, order);
         
         logger.info("Order created successfully: {}", orderId);
         
@@ -97,7 +98,7 @@ public class OrderService {
         
         // TODO: Publish order created event to message queue (RETAILX-8005)
         
-        return toOrderResponse(order);
+        return order;
     }
     
     /**
@@ -108,7 +109,7 @@ public class OrderService {
     public OrderResponse getOrderById(String orderId) {
         logger.info("Retrieving order: {}", orderId);
         
-        Order order = orderRepository.findById(orderId).orElse(null);
+        OrderResponse order = orderStore.get(orderId);
         
         if (order == null) {
             logger.warn("Order not found: {}", orderId);
@@ -116,7 +117,7 @@ public class OrderService {
         }
         
         logger.info("Order retrieved successfully: {}", orderId);
-        return toOrderResponse(order);
+        return order;
     }
     
     /**
@@ -128,7 +129,7 @@ public class OrderService {
     public OrderResponse updateOrderStatus(String orderId, OrderResponse.OrderStatus newStatus) {
         logger.info("Updating order status: {} -> {}", orderId, newStatus);
         
-        Order order = orderRepository.findById(orderId).orElse(null);
+        OrderResponse order = orderStore.get(orderId);
         if (order == null) {
             logger.warn("Order not found for status update: {}", orderId);
             return null;
@@ -156,7 +157,7 @@ public class OrderService {
         
         // TODO: Publish order status updated event to message queue (RETAILX-8005)
         
-        return toOrderResponse(order);
+        return order;
     }
     
     /**
@@ -179,20 +180,27 @@ public class OrderService {
         return total;
     }
     
+    /**
+     * Retrieves all orders in the system
+     * 
+     * TODO: Query from database instead of in-memory storage (RETAILX-8003)
+     * TODO: Add pagination support (RETAILX-8038)
+     * TODO: Add filtering and sorting options (RETAILX-8036, RETAILX-8046)
+     * TODO: Add customer authorization to only return their orders (RETAILX-8043)
+     */
+    public java.util.List<OrderResponse> getAllOrders() {
+        logger.info("Retrieving all orders");
+        
+        java.util.List<OrderResponse> orders = new java.util.ArrayList<>(orderStore.values());
+        
+        // TODO: Add sorting by creation date (most recent first) (RETAILX-8046)
+        orders.sort((o1, o2) -> o2.getCreatedAt().compareTo(o1.getCreatedAt()));
+        
+        logger.info("Retrieved {} orders successfully", orders.size());
+        return orders;
+    }
+    
     // TODO: Add method to cancel order (RETAILX-8032)
     // TODO: Add method to get orders by customer email (RETAILX-8035)
     // TODO: Add method to search orders with filters (RETAILX-8036)
-
-    private OrderResponse toOrderResponse(Order order) {
-        return new OrderResponse(
-            order.getOrderId(),
-            order.getCustomerEmail(),
-            order.getItems(),
-            order.getDeliveryAddress(),
-            order.getTotalAmount(),
-            order.getStatus(),
-            order.getCreatedAt(),
-            order.getUpdatedAt()
-        );
-    }
 }

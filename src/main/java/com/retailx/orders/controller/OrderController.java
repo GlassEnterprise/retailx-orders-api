@@ -145,6 +145,49 @@ public class OrderController {
         }
     }
     
+    /**
+     * Get all orders
+     * 
+     * GET /orders
+     * 
+     * Retrieves a list of all orders in the system.
+     * 
+     * TODOs:
+     * - [ ] Add pagination support (RETAILX-8038)
+     * - [ ] Add filtering by customer, status, date range (RETAILX-8036)
+     * - [ ] Add sorting options (RETAILX-8046)
+     * - [ ] Add customer authorization to only show their orders (RETAILX-8043)
+     */
+    @GetMapping
+    @Operation(
+        summary = "Get all orders",
+        description = "Retrieves a list of all orders in the system"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Orders retrieved successfully"),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<java.util.List<OrderResponse>> getAllOrders() {
+        
+        logger.info("Received get all orders request");
+        
+        try {
+            // TODO: Add pagination support (RETAILX-8038)
+            // TODO: Add filtering and sorting (RETAILX-8036, RETAILX-8046)
+            // TODO: Add customer authorization check (RETAILX-8043)
+            
+            java.util.List<OrderResponse> orders = orderService.getAllOrders();
+            
+            logger.info("Retrieved {} orders successfully", orders.size());
+            return new ResponseEntity<>(orders, HttpStatus.OK);
+            
+        } catch (Exception e) {
+            // TODO: Add proper error handling and return appropriate status codes (RETAILX-8042)
+            logger.error("Failed to retrieve orders", e);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    
     // TODO: Add endpoint to list orders by customer (RETAILX-8035)
     // TODO: Add endpoint to update order status (RETAILX-8037)
     // TODO: Add endpoint to cancel order (RETAILX-8032)
