@@ -1,5 +1,6 @@
 package com.retailx.orders.model;
 
+import jakarta.persistence.Embeddable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -68,6 +69,7 @@ public class CreateOrderRequest {
      * 
      * TODO: Move to separate file when it grows (RETAILX-8014)
      */
+    @Embeddable
     public static class OrderItem {
         @NotBlank(message = "Product ID is required")
         private String productId;

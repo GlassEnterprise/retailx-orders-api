@@ -2,7 +2,9 @@ package com.retailx.orders.service;
 
 import com.retailx.orders.client.NotificationClient;
 import com.retailx.orders.model.CreateOrderRequest;
+import com.retailx.orders.model.Order;
 import com.retailx.orders.model.OrderResponse;
+import com.retailx.orders.repository.OrderRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,8 +12,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,13 +35,12 @@ public class OrderService {
     
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
     
-    // TODO: Replace with proper database storage (RETAILX-8003)
-    private final Map<String, OrderResponse> orderStore = new HashMap<>();
-    
+    private final OrderRepository orderRepository;
     private final NotificationClient notificationClient;
     
     @Autowired
-    public OrderService(NotificationClient notificationClient) {
+    public OrderService(OrderRepository orderRepository, NotificationClient notificationClient) {
+        this.orderRepository = orderRepository;
         this.notificationClient = notificationClient;
     }
     
@@ -67,7 +66,7 @@ public class OrderService {
         BigDecimal totalAmount = calculateTotalAmount(request);
         
         // Create order response
-        OrderResponse order = new OrderResponse(
+        Order order = new Order(
             orderId,
             request.getCustomerEmail(),
             request.getItems(),
@@ -79,7 +78,7 @@ public class OrderService {
         );
         
         // Store order (TODO: use database instead of in-memory storage)
-        orderStore.put(orderId, order);
+        orderRepository.save(order);
         
         logger.info("Order created successfully: {}", orderId);
         
@@ -98,7 +97,7 @@ public class OrderService {
         
         // TODO: Publish order created event to message queue (RETAILX-8005)
         
-        return order;
+        return toOrderResponse(order);
     }
     
     /**
@@ -109,7 +108,7 @@ public class OrderService {
     public OrderResponse getOrderById(String orderId) {
         logger.info("Retrieving order: {}", orderId);
         
-        OrderResponse order = orderStore.get(orderId);
+        Order order = orderRepository.findById(orderId).orElse(null);
         
         if (order == null) {
             logger.warn("Order not found: {}", orderId);
@@ -117,7 +116,7 @@ public class OrderService {
         }
         
         logger.info("Order retrieved successfully: {}", orderId);
-        return order;
+        return toOrderResponse(order);
     }
     
     /**
@@ -129,7 +128,7 @@ public class OrderService {
     public OrderResponse updateOrderStatus(String orderId, OrderResponse.OrderStatus newStatus) {
         logger.info("Updating order status: {} -> {}", orderId, newStatus);
         
-        OrderResponse order = orderStore.get(orderId);
+        Order order = orderRepository.findById(orderId).orElse(null);
         if (order == null) {
             logger.warn("Order not found for status update: {}", orderId);
             return null;
@@ -157,7 +156,7 @@ public class OrderService {
         
         // TODO: Publish order status updated event to message queue (RETAILX-8005)
         
-        return order;
+        return toOrderResponse(order);
     }
     
     /**
@@ -183,4 +182,17 @@ public class OrderService {
     // TODO: Add method to cancel order (RETAILX-8032)
     // TODO: Add method to get orders by customer email (RETAILX-8035)
     // TODO: Add method to search orders with filters (RETAILX-8036)
+
+    private OrderResponse toOrderResponse(Order order) {
+        return new OrderResponse(
+            order.getOrderId(),
+            order.getCustomerEmail(),
+            order.getItems(),
+            order.getDeliveryAddress(),
+            order.getTotalAmount(),
+            order.getStatus(),
+            order.getCreatedAt(),
+            order.getUpdatedAt()
+        );
+    }
 }
